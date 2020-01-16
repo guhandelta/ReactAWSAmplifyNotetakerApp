@@ -1,0 +1,11 @@
+{
+    "AppSyncApiName": "reactawsamplifyapp",
+    "DynamoDBBillingMode": "PAY_PER_REQUEST",
+    "DynamoDBEnableServerSideEncryption": "false",
+    "AuthCognitoUserPoolId": {
+        "Fn::GetAtt": [
+            "authreactawsamplifyappd562a2f9",
+            "Outputs.UserPoolId"
+        ]
+    }
+}

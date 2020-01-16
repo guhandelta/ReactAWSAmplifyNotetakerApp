@@ -10,6 +10,11 @@
             "StackName": "amplify-reactawsamplifyapp-rctawsapp-120242",
             "StackId": "arn:aws:cloudformation:us-east-1:337540163509:stack/amplify-reactawsamplifyapp-rctawsapp-120242/6552a9e0-388a-11ea-8cee-127e9735111e",
             "AmplifyAppId": "d2gt02v67v5hxr"
+        },
+        "categories": {
+            "auth": {
+                "reactawsamplifyappd562a2f9": {}
+            }
         }
     }
 }
