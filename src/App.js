@@ -4,6 +4,7 @@ import { withAuthenticator } from 'aws-amplify-react'
 
 import { createNote, deleteNote, updateNote } from './graphql/mutations'
 import { listNotes } from './graphql/queries'
+import { onCreateNote } from './graphql/subscriptions'
 
 class App extends React.Component {
   state = {
@@ -12,7 +13,22 @@ class App extends React.Component {
     notes: []
   };
 
-  async componentDidMount() {
+  componentDidMount() {
+    //Creating a listener in this function will add a listener when the component mounts and removes the listener, on unMount
+    this.getNotes();
+    this.createNoteListener = API.graphql(graphqlOperation(onCreateNote)).subscribe({
+      //Above statement returns a listener, that listens for any onCreateNode mutation
+      //next is a fn() that allows to get any data returned from the subscription
+      next: noteData => {
+        const newNote = noteData.value.data.onCreateNote;
+        const prevNotes = this.state.notes.filter(note => note.id !== newNote.id); //Making sure there is no note already with the same id
+        const updatedNotes = [...prevNotes, newNote];
+        this.setState({ notes: updatedNotes });
+      }
+    });
+  }
+
+  getNotes = async () => {
     const result = await API.graphql(graphqlOperation(listNotes));
     this.setState({ notes: result.data.listNotes.items });
   }
@@ -40,16 +56,21 @@ class App extends React.Component {
     } else {
       const input = { note }; // input = { note: note }
       // using async await to receive the response data from the GraphQL mutation
-      const result = await API.graphql(graphqlOperation(createNote, { input })) // { input*the property required in the graphql query*: input*var* }
+      await API.graphql(graphqlOperation(createNote, { input })) // var to store the return data from createNode operation is not needed
       // grapqlOperation( reference to the mutation function, 2nd arg - i/p to the mutation fn(), which should be given in an obj, as the- 
       //- i/p param expected here, as per graphQL is an object )
       // result -> response || all the data is available on the property 'data', in that property, all the note data is available on a -
-      //- property 'createNode', which matches teh operation performed here
-      const newNote = result.data.createNote
-      const updatedNotes = [newNote, ...notes];
-      this.setState({ notes: updatedNotes, note: "" });
+      //- property 'createNode', which matches the operation performed here
+      // const newNote = result.data.createNote --> this logic has been added in the subscriber
+      // const updatedNotes = [newNote, ...notes];
+      // this.setState({ notes: updatedNotes, note: "" }); -> updating the notes array is done by the subscriber, and this should be removed
+      this.setState({ note: "" });
       // update the notes list along with the latest addition and set the note to empty_string, when calling setState  
     }
+  }
+
+  componentWillUnmount() {
+    this.createNoteListener.unsubscribe(); //Removing the onCreateNote listener, before component is unMounted
   }
 
   handleSetNote = ({ note, id }) => this.setState({ note, id })// id is to find where the note originally was, in the list and add the updated-
