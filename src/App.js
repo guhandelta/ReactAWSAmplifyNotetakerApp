@@ -2,11 +2,12 @@ import React from 'react';
 import { API, graphqlOperation } from 'aws-amplify'
 import { withAuthenticator } from 'aws-amplify-react'
 
-import { createNote, deleteNote } from './graphql/mutations'
+import { createNote, deleteNote, updateNote } from './graphql/mutations'
 import { listNotes } from './graphql/queries'
 
 class App extends React.Component {
   state = {
+    id: "",
     note: "",
     notes: []
   };
@@ -16,22 +17,57 @@ class App extends React.Component {
     this.setState({ notes: result.data.listNotes.items });
   }
 
+  hasExistingNote = () => {
+    const { notes, id } = this.state;
+    if (id) {
+      const isNote = notes.findIndex(note => note.id === id) > -1; // finIndex() returns the index, if found else returns a -1-
+      //- isNote is converted into a boolean value, by comparing it with -1
+      return isNote;
+    }
+    return false; // if there is no id in the state and allow for a new note to be created  
+  }
+
   handleChangeNote = event => this.setState({ note: event.target.value })
 
   handleAddNote = async event => {
     event.preventDefault();
     const { note, notes } = this.state;
-    const input = { note }; // input = { note: note }
-    // using async await to receive the response data from the GraphQL mutation
-    const result = await API.graphql(graphqlOperation(createNote, { input })) // { input*the property required in the graphql query*: input*var* }
-    // grapqlOperation( reference to the mutation function, 2nd arg - i/p to the mutation fn(), which should be given in an obj, as the- 
-    //- i/p param expected here, as per graphQL is an object )
-    // result -> response || all the data is available on the property 'data', in that property, all the note data is available on a -
-    //- property 'createNode', which matches teh operation performed here
-    const newNote = result.data.createNote
-    const updatedNotes = [newNote, ...notes];
-    this.setState({ notes: updatedNotes, note: "" });
-    // update the notes list along with the latest addition and set the note to empty_string, when calling setState
+    event.preventDefault();
+    //Check if an similar note exists
+    if (this.hasExistingNote()) {
+      this.handleUpdateNote();
+      console.log('Note Updated');
+    } else {
+      const input = { note }; // input = { note: note }
+      // using async await to receive the response data from the GraphQL mutation
+      const result = await API.graphql(graphqlOperation(createNote, { input })) // { input*the property required in the graphql query*: input*var* }
+      // grapqlOperation( reference to the mutation function, 2nd arg - i/p to the mutation fn(), which should be given in an obj, as the- 
+      //- i/p param expected here, as per graphQL is an object )
+      // result -> response || all the data is available on the property 'data', in that property, all the note data is available on a -
+      //- property 'createNode', which matches teh operation performed here
+      const newNote = result.data.createNote
+      const updatedNotes = [newNote, ...notes];
+      this.setState({ notes: updatedNotes, note: "" });
+      // update the notes list along with the latest addition and set the note to empty_string, when calling setState  
+    }
+  }
+
+  handleSetNote = ({ note, id }) => this.setState({ note, id })// id is to find where the note originally was, in the list and add the updated-
+  //- note in the same place
+
+  handleUpdateNote = async () => {
+    const { id, notes, note } = this.state;
+    const input = { id, note };
+    const result = await API.graphql(graphqlOperation(updateNote, { input }))
+    const updatedNote = result.data.updateNote;
+    const index = notes.findIndex(note => note.id === updatedNote.id)
+    const updatedNotes = [
+      ...notes.slice(0, index), //1) The part of the array up until the updated note 
+      updatedNote, //2) The updated note
+      ...notes.slice(index + 1) //3) The part of the array after the updated note
+      // 2nd arg is not required for slice() to get from a certain index to the end
+    ]
+    this.setState({ notes: updatedNotes, note: "", id: "" });
   }
 
   handleDeleteNode = async noteId => {
@@ -45,7 +81,7 @@ class App extends React.Component {
   }
 
   render() {
-    const { note, notes } = this.state;
+    const { id, note, notes } = this.state;
     return (
       <div className="flex flex-column items-center justify-center pa3 bg-washer-red">
         <div className="code f2-1">
@@ -61,19 +97,24 @@ class App extends React.Component {
               onChange={this.handleChangeNote}
               value={note}
             />
-            <button className="pa2 f4" type="submit">Add Note</button>
+            <button className="pa2 f4" type="submit">
+              {id ? "Update Note" : "Add Note"}
+            </button>
           </form>
         </div>
         {/* Notes List */}
         <div>
           {notes.map(note => (
-            <div key={note.key} className="flex items-center">
-              <li className="list pa1 f3">
+            <div key={note.id} className="flex items-center">
+              <li onClick={() => this.handleSetNote(note)} className="list pa1 f3">
+                {/* handleSetNote -> sets the note in state, which will populate the input, with the note date, Since-
+                - the input is a controlled component. The entire note data of selected note is sent to the handleSetNote()-
+                - handleSetNote() is conv as an arrow fn() to prevent it from being called on pageLoad*/}
                 {note.note}
               </li>
               <button onClick={() => this.handleDeleteNode(note.id)} className="bg-transparent bn f4">
                 {/* this.handleDeleteNode(item.id) is gven as an arrow function, so this won't be called during the page load, since-
-                - arguments are passed onto the funciton */}
+                - arguments are passed onto the function */}
                 <span>&times;</span>
               </button>
             </div>
