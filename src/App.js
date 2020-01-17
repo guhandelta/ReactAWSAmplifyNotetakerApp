@@ -12,22 +12,37 @@ class App extends React.Component {
 
   handleChangeNote = event => this.setState({ note: event.target.value })
 
-  handleAddNote = event => {
+  handleAddNote = async event => {
     event.preventDefault();
-    const { note } = this.state;
+    const { note, notes } = this.state;
     const input = { note }; // input = { note: note }
-    API.graphql(graphqlOperation(createNote, { input })) // { input*the property required in the graphql query*: input*var* }
+    // using async await to receive the response data from the GraphQL mutation
+    const result = await API.graphql(graphqlOperation(createNote, { input })) // { input*the property required in the graphql query*: input*var* }
+    // result -> response || all teh data is available on the property 'data', in that property, all the note data is available on a -
+    //- property 'createNode', which matches teh operation performed here
+    const newNote = result.data.createNote
+    const updatedNotes = [newNote, ...notes];
+    this.setState({ notes: updatedNotes, note: "" });
+    // update the notes list along with the latest addition and set the note to empty_string, when calling setState
   }
 
   render() {
-    const { notes } = this.state;
+    const { note, notes } = this.state;
     return (
       <div className="flex flex-column items-center justify-center pa3 bg-washer-red">
         <div className="code f2-1">
           Amplify Notestaker
           {/* Notestaker Form */}
           <form onSubmit={this.handleAddNote} action="" className="mb3">
-            <input type="text" name="" id="" className="pa2 f4" placeholder="Your note" onChange={this.handleChangeNote} />
+            {/* The <input> is converted into a controlled component, by specifying it with a value and have that value controlled by-
+            - state */}
+            <input
+              type="text"
+              className="pa2 f4"
+              placeholder="Your note"
+              onChange={this.handleChangeNote}
+              value={note}
+            />
             <button className="pa2 f4" type="submit">Add Note</button>
           </form>
         </div>
